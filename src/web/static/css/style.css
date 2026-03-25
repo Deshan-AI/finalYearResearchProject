@@ -1,0 +1,72 @@
+/* src/web/static/css/style.css */
+:root {
+    --primary-color: #4a90e2;
+    --success-color: #5cb85c;
+    --warning-color: #f0ad4e;
+    --danger-color: #d9534f;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    padding: 10px 30px;
+}
+
+.risk-high {
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+.risk-medium {
+    color: var(--warning-color);
+    font-weight: bold;
+}
+
+.risk-low {
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+.dashboard-card {
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px 0;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+}

@@ -1,0 +1,71 @@
+<!-- src/web/templates/login.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">🔐 Login to System</h4>
+            </div>
+            <div class="card-body">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="studentId" class="form-label">Student ID</label>
+                        <input type="text" class="form-control" id="studentId" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe">Remember me</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <p>Don't have an account? <a href="/register">Register here</a></p>
+                    <p class="text-muted small">Demo credentials: STU001 / password123</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5>🔑 Select Login Type:</h5>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-outline-primary" onclick="setDemoLogin('STU001')">Student Demo</button>
+                    <button class="btn btn-outline-secondary" onclick="setDemoLogin('COUN001')">Counselor Demo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setDemoLogin(userId) {
+    document.getElementById('studentId').value = userId;
+    document.getElementById('password').value = 'password123';
+}
+
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const studentId = document.getElementById('studentId').value;
+    
+    // Simple demo login - redirect based on ID
+    if (studentId.startsWith('COUN')) {
+        window.location.href = '/counselor';
+    } else {
+        window.location.href = '/student/' + studentId;
+    }
+});
+</script>
+{% endblock %}

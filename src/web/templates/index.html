@@ -1,0 +1,47 @@
+<!-- src/web/templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 text-center">
+        <h1 class="display-4">Student Burnout Detection System</h1>
+        <p class="lead">Proactive mental health support for university students</p>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">📊 Real-time Monitoring</h5>
+                <p class="card-text">Continuous analysis of heart rate, sleep patterns, and activity levels</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">🤖 Automated Alerts</h5>
+                <p class="card-text">Early detection and automated supportive interventions</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">🔒 Privacy First</h5>
+                <p class="card-text">Anonymous data collection with full student consent</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6 offset-md-3 text-center">
+        <p>Join our pilot program to help improve student mental health support</p>
+        <button class="btn btn-primary btn-lg" onclick="location.href='/login'">Get Started</button>
+    </div>
+</div>
+{% endblock %}

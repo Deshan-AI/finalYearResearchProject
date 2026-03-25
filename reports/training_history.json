@@ -1,0 +1,50 @@
+[
+  {
+    "timestamp": "2026-03-19 20:09:19.160176",
+    "n_samples": 15,
+    "best_model": "GradientBoosting",
+    "best_f1_score": 1.0,
+    "class_distribution": {
+      "0": 7,
+      "1": 6,
+      "2": 2
+    },
+    "model_scores": {
+      "RandomForest": {
+        "accuracy": 0.3333333333333333,
+        "precision": 0.16666666666666666,
+        "recall": 0.3333333333333333,
+        "f1_score": 0.2222222222222222,
+        "model": "RandomForestClassifier(max_depth=10, n_jobs=-1, random_state=42)"
+      },
+      "XGBoost": {
+        "accuracy": 0.6666666666666666,
+        "precision": 0.5,
+        "recall": 0.6666666666666666,
+        "f1_score": 0.5555555555555555,
+        "model": "XGBClassifier(base_score=None, booster=None, callbacks=None,\n              colsample_bylevel=None, colsample_bynode=None,\n              colsample_bytree=None, device=None, early_stopping_rounds=None,\n              enable_categorical=False, eval_metric='mlogloss',\n              feature_types=None, feature_weights=None, gamma=None,\n              grow_policy=None, importance_type=None,\n              interaction_constraints=None, learning_rate=0.1, max_bin=None,\n              max_cat_threshold=None, max_cat_to_onehot=None,\n              max_delta_step=None, max_depth=6, max_leaves=None,\n              min_child_weight=None, missing=nan, monotone_constraints=None,\n              multi_strategy=None, n_estimators=100, n_jobs=None,\n              num_parallel_tree=None, ...)"
+      },
+      "GradientBoosting": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "model": "GradientBoostingClassifier(max_depth=5, random_state=42)"
+      },
+      "LogisticRegression": {
+        "accuracy": 0.3333333333333333,
+        "precision": 0.16666666666666666,
+        "recall": 0.3333333333333333,
+        "f1_score": 0.2222222222222222,
+        "model": "LogisticRegression(max_iter=1000, random_state=42)"
+      },
+      "SVM": {
+        "accuracy": 0.3333333333333333,
+        "precision": 0.1111111111111111,
+        "recall": 0.3333333333333333,
+        "f1_score": 0.16666666666666666,
+        "model": "SVC(probability=True, random_state=42)"
+      }
+    }
+  }
+]
