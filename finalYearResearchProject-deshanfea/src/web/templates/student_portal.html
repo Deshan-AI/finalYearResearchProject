@@ -1,0 +1,140 @@
+<!-- src/web/templates/student_portal.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Student Dashboard</h2>
+        <p>Welcome back, Student {{ student_id }}</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Current Risk Level</div>
+            <div class="card-body">
+                <h5 class="card-title" id="risk-level">Loading...</h5>
+                <p class="card-text" id="risk-score"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-header">Sleep (7-day avg)</div>
+            <div class="card-body">
+                <h5 class="card-title" id="avg-sleep">-</h5>
+                <p class="card-text">hours per night</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-header">HRV (7-day avg)</div>
+            <div class="card-body">
+                <h5 class="card-title" id="avg-hrv">-</h5>
+                <p class="card-text">ms</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-header">Days Monitored</div>
+            <div class="card-body">
+                <h5 class="card-title" id="days-monitored">-</h5>
+                <p class="card-text">total days</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                Risk Trend (Last 7 Days)
+            </div>
+            <div class="card-body">
+                <div id="risk-chart"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                Recommendations
+            </div>
+            <div class="card-body">
+                <ul class="list-group" id="recommendations-list">
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                Recent Messages
+            </div>
+            <div class="card-body" id="messages">
+                <p class="text-muted">No new messages</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load student dashboard data
+    fetch(`/api/student/{{ student_id }}/dashboard`)
+        .then(response => response.json())
+        .then(data => {
+            // Update risk level
+            const riskLevel = document.getElementById('risk-level');
+            riskLevel.textContent = data.current_risk.risk_level;
+            riskLevel.className = data.current_risk.risk_level === 'HIGH' ? 'text-danger' : 
+                                 data.current_risk.risk_level === 'MEDIUM' ? 'text-warning' : 'text-success';
+            
+            document.getElementById('risk-score').textContent = `Score: ${data.current_risk.risk_score}`;
+            document.getElementById('avg-sleep').textContent = `${data.weekly_summary.avg_sleep}h`;
+            document.getElementById('avg-hrv').textContent = data.weekly_summary.avg_hrv;
+            document.getElementById('days-monitored').textContent = data.weekly_summary.total_days;
+            
+            // Update recommendations
+            const recList = document.getElementById('recommendations-list');
+            recList.innerHTML = '';
+            data.recommendations.forEach(rec => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                li.textContent = rec;
+                recList.appendChild(li);
+            });
+            
+            // Create trend chart
+            const dates = data.recent_trend.map(d => new Date(d.date).toLocaleDateString());
+            const scores = data.recent_trend.map(d => d.risk_score);
+            
+            const trace = {
+                x: dates,
+                y: scores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Risk Score',
+                line: {color: '#ff6b6b', width: 2}
+            };
+            
+            const layout = {
+                height: 300,
+                margin: {t: 10, b: 30, l: 40, r: 20},
+                yaxis: {title: 'Risk Score', range: [0, 1]}
+            };
+            
+            Plotly.newPlot('risk-chart', [trace], layout);
+        });
+</script>
+{% endblock %}

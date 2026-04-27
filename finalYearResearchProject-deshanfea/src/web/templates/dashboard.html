@@ -1,0 +1,292 @@
+<!-- src/web/templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>📊 Student Wellness Dashboard</h2>
+        <p>Welcome back, <strong>{{ student_id }}</strong></p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-success h-100">
+            <div class="card-body">
+                <h5 class="card-title">Current Risk Level</h5>
+                <h2 class="display-4" id="riskLevel">-</h2>
+                <p class="mb-0" id="riskScore"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body">
+                <h5 class="card-title">Heart Rate (HRV)</h5>
+                <h2 class="display-4" id="hrvValue">-</h2>
+                <p class="mb-0" id="hrvStatus"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <h5 class="card-title">Sleep (7-day avg)</h5>
+                <h2 class="display-4" id="sleepHours">-</h2>
+                <p class="mb-0" id="sleepQuality"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary h-100">
+            <div class="card-body">
+                <h5 class="card-title">Daily Steps</h5>
+                <h2 class="display-4" id="stepCount">-</h2>
+                <p class="mb-0" id="activityLevel"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📈 7-Day Risk Trend</h5>
+            </div>
+            <div class="card-body">
+                <div id="riskChart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">💡 Recommendations</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group" id="recommendationsList">
+                    <li class="list-group-item">Loading recommendations...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Data Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📋 Recent Health Data</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>HRV</th>
+                                <th>Sleep Hours</th>
+                                <th>Sleep Quality</th>
+                                <th>Steps</th>
+                                <th>Stress Level</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentDataTable">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Wellness Tips Card -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5>🌟 Daily Wellness Tip</h5>
+                <p id="dailyTip">Take deep breaths when feeling stressed. Your well-being matters!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Load student data
+const studentId = '{{ student_id }}';
+
+async function loadDashboard() {
+    try {
+        const response = await fetch(`/api/student/${studentId}/dashboard`);
+        const data = await response.json();
+        
+        // Update stats
+        updateStats(data);
+        
+        // Update chart
+        updateChart(data.recent_trend);
+        
+        // Update recommendations
+        updateRecommendations(data.recommendations);
+        
+        // Update recent data
+        updateRecentData(data.recent_data);
+        
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showError();
+    }
+}
+
+function updateStats(data) {
+    // Risk level
+    const riskEl = document.getElementById('riskLevel');
+    riskEl.textContent = data.current_risk?.risk_level || 'LOW';
+    riskEl.className = `display-4 text-${getRiskColor(data.current_risk?.risk_level)}`;
+    
+    document.getElementById('riskScore').textContent = 
+        `Score: ${(data.current_risk?.risk_score || 0).toFixed(2)}`;
+    
+    // HRV
+    document.getElementById('hrvValue').textContent = 
+        `${data.weekly_summary?.avg_hrv || 0} ms`;
+    document.getElementById('hrvStatus').textContent = 
+        getHRVStatus(data.weekly_summary?.avg_hrv);
+    
+    // Sleep
+    document.getElementById('sleepHours').textContent = 
+        `${data.weekly_summary?.avg_sleep || 0} h`;
+    document.getElementById('sleepQuality').textContent = 
+        `Quality: ${(data.weekly_summary?.avg_sleep_quality || 0).toFixed(2)}`;
+    
+    // Steps
+    document.getElementById('stepCount').textContent = 
+        data.weekly_summary?.avg_steps || 0;
+    document.getElementById('activityLevel').textContent = 
+        getActivityLevel(data.weekly_summary?.avg_steps);
+}
+
+function updateChart(trendData) {
+    if (!trendData || trendData.length === 0) return;
+    
+    const dates = trendData.map(d => new Date(d.date).toLocaleDateString());
+    const scores = trendData.map(d => d.risk_score);
+    
+    const trace = {
+        x: dates,
+        y: scores,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Risk Score',
+        line: {color: '#ff6b6b', width: 3},
+        marker: {size: 8}
+    };
+    
+    const layout = {
+        height: 300,
+        margin: {t: 20, r: 20, l: 40, b: 40},
+        yaxis: {title: 'Risk Score', range: [0, 1]},
+        hovermode: 'x'
+    };
+    
+    Plotly.newPlot('riskChart', [trace], layout);
+}
+
+function updateRecommendations(recs) {
+    const list = document.getElementById('recommendationsList');
+    list.innerHTML = '';
+    
+    if (!recs || recs.length === 0) {
+        list.innerHTML = '<li class="list-group-item">No recommendations</li>';
+        return;
+    }
+    
+    recs.forEach(rec => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>${rec}`;
+        list.appendChild(li);
+    });
+}
+
+function updateRecentData(recentData) {
+    const tbody = document.getElementById('recentDataTable');
+    tbody.innerHTML = '';
+    
+    if (!recentData || recentData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No data available</td></tr>';
+        return;
+    }
+    
+    recentData.slice(0, 5).forEach(item => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${new Date(item.timestamp).toLocaleDateString()}</td>
+            <td>${item.hrv_value || 0} ms</td>
+            <td>${item.sleep_hours || 0} h</td>
+            <td>${(item.sleep_quality || 0).toFixed(2)}</td>
+            <td>${item.step_count || 0}</td>
+            <td>${(item.stress_level || 0).toFixed(2)}</td>
+            <td><span class="badge bg-${getRiskBadgeColor(item.risk_level)}">${item.risk_level || 'LOW'}</span></td>
+        `;
+    });
+}
+
+function getRiskColor(level) {
+    return level === 'HIGH' ? 'danger' : level === 'MEDIUM' ? 'warning' : 'success';
+}
+
+function getRiskBadgeColor(level) {
+    return level === 'HIGH' ? 'danger' : level === 'MEDIUM' ? 'warning' : 'success';
+}
+
+function getHRVStatus(hrv) {
+    if (!hrv) return 'Unknown';
+    return hrv < 45 ? '⚠️ Low (Stressed)' : hrv < 60 ? '🟡 Moderate' : '✅ Good';
+}
+
+function getActivityLevel(steps) {
+    if (!steps) return 'Unknown';
+    return steps < 3000 ? '🟤 Sedentary' : steps < 7000 ? '🟡 Light' : '🟢 Active';
+}
+
+function showError() {
+    document.querySelectorAll('.card-body').forEach(el => {
+        el.innerHTML += '<div class="alert alert-danger mt-2">Failed to load data</div>';
+    });
+}
+
+// Auto-refresh every 5 minutes
+setInterval(loadDashboard, 300000);
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.display-4 {
+    font-size: 2.5rem;
+}
+</style>
+{% endblock %}
