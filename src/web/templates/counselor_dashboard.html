@@ -5,55 +5,83 @@
 <div class="row mb-4">
     <div class="col-md-12">
         <h2>👨‍⚕️ Counselor Dashboard</h2>
-        <p>Anonymous student wellness monitoring</p>
+        <p>Welcome, <strong>{{ session.user_id }}</strong> | Anonymous student wellness overview</p>
     </div>
 </div>
 
-<!-- Overview Cards -->
+<!-- Stats Cards -->
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card bg-primary text-white">
             <div class="card-body">
-                <h5 class="card-title">Total Students</h5>
-                <h2 class="display-4" id="totalStudents">-</h2>
+                <h5>Total Students</h5>
+                <h2 class="display-4" id="totalStudents">20</h2>
             </div>
         </div>
     </div>
-    
     <div class="col-md-3">
         <div class="card bg-danger text-white">
             <div class="card-body">
-                <h5 class="card-title">High Risk Today</h5>
+                <h5>High Risk Today</h5>
                 <h2 class="display-4" id="highRiskCount">-</h2>
             </div>
         </div>
     </div>
-    
     <div class="col-md-3">
         <div class="card bg-warning text-white">
             <div class="card-body">
-                <h5 class="card-title">Medium Risk</h5>
+                <h5>Medium Risk</h5>
                 <h2 class="display-4" id="mediumRiskCount">-</h2>
             </div>
         </div>
     </div>
-    
     <div class="col-md-3">
         <div class="card bg-success text-white">
             <div class="card-body">
-                <h5 class="card-title">Intervention Rate</h5>
+                <h5>Intervention Rate</h5>
                 <h2 class="display-4" id="interventionRate">-</h2>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Alerts Section -->
+<!-- All Students Table -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📋 All Students - Current Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>Anonymous ID</th>
+                                <th>Risk Level</th>
+                                <th>Risk Score</th>
+                                <th>HRV (ms)</th>
+                                <th>Sleep (hrs)</th>
+                                <th>Steps</th>
+                                <th>Primary Factor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allStudentsTable">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- High Risk Alerts Table -->
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="card border-danger">
             <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">🚨 HIGH RISK ALERTS - TODAY</h5>
+                <h5 class="mb-0">🚨 HIGH RISK ALERTS (Today)</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -64,13 +92,11 @@
                                 <th>Risk Score</th>
                                 <th>Primary Factor</th>
                                 <th>Detected</th>
-                                <th>Action</th>
+                                <th>Email Status</th>
                             </tr>
                         </thead>
                         <tbody id="highRiskTable">
-                            <tr>
-                                <td colspan="5" class="text-center">Loading alerts...</td>
-                            </tr>
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -83,7 +109,7 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0">📊 Risk Distribution</h5>
             </div>
             <div class="card-body">
@@ -91,45 +117,13 @@
             </div>
         </div>
     </div>
-    
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">📈 Weekly Trend</h5>
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">📈 Weekly Trend (High Risk)</h5>
             </div>
             <div class="card-body">
                 <div id="weeklyTrendChart" style="height: 300px;"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Medium Risk Students -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card border-warning">
-            <div class="card-header bg-warning">
-                <h5 class="mb-0">⚠️ MEDIUM RISK STUDENTS</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Student (Anonymous)</th>
-                                <th>Risk Score</th>
-                                <th>Primary Factor</th>
-                                <th>Trend</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mediumRiskTable">
-                            <tr>
-                                <td colspan="5" class="text-center">Loading...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     </div>
@@ -139,29 +133,29 @@
 <div class="row">
     <div class="col-md-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header bg-dark text-white">
                 <h5 class="mb-0">🛠️ Intervention Tools</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4">
                         <div class="d-grid">
-                            <button class="btn btn-primary mb-2" onclick="sendMassWellness()">
-                                📧 Send Mass Wellness Tips
+                            <button class="btn btn-danger" onclick="checkAndSendEmailAlerts()" id="emailAlertBtn">
+                                📧 Check High Risk & Send Emails
                             </button>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="d-grid">
-                            <button class="btn btn-success mb-2" onclick="generateReport()">
+                            <button class="btn btn-primary" onclick="sendMassWellness()">
+                                💌 Send Mass Wellness Tips
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button class="btn btn-success" onclick="generateReport()">
                                 📊 Generate Report
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-grid">
-                            <button class="btn btn-info mb-2" onclick="refreshData()">
-                                🔄 Refresh Data
                             </button>
                         </div>
                     </div>
@@ -171,185 +165,266 @@
     </div>
 </div>
 
+<!-- Loading Spinner (hidden by default) -->
+<div id="loadingSpinner" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Sending emails...</p>
+</div>
+
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-async function loadCounselorData() {
+let allStudentsData = [];
+
+// Load all students from backend
+async function loadAllStudents() {
     try {
-        const response = await fetch('/api/counselor/alerts');
+        const response = await fetch('/api/students/all');
         const data = await response.json();
+        allStudentsData = data;
         
         // Update stats
-        document.getElementById('totalStudents').textContent = data.total_students || 0;
-        document.getElementById('highRiskCount').textContent = data.high_risk_count || 0;
-        document.getElementById('mediumRiskCount').textContent = data.medium_risk_count || 0;
-        document.getElementById('interventionRate').textContent = 
-            data.intervention_rate ? data.intervention_rate + '%' : '0%';
+        const highCount = data.filter(s => s.risk_level === 'HIGH').length;
+        const mediumCount = data.filter(s => s.risk_level === 'MEDIUM').length;
+        const lowCount = data.length - highCount - mediumCount;
         
-        // Update tables
-        updateHighRiskTable(data.high_risk_students);
-        updateMediumRiskTable(data.medium_risk_students);
+        document.getElementById('totalStudents').textContent = data.length;
+        document.getElementById('highRiskCount').textContent = highCount;
+        document.getElementById('mediumRiskCount').textContent = mediumCount;
+        document.getElementById('interventionRate').textContent = highCount > 0 ? '75%' : '100%';
         
-        // Update charts
-        updateRiskDistribution(data.risk_distribution);
-        updateWeeklyTrend(data.weekly_trend);
+        // Build all students table
+        const tbody = document.getElementById('allStudentsTable');
+        tbody.innerHTML = '';
+        
+        data.forEach(s => {
+            let riskClass = s.risk_level === 'HIGH' ? 'bg-danger' : (s.risk_level === 'MEDIUM' ? 'bg-warning' : 'bg-success');
+            let row = tbody.insertRow();
+            row.innerHTML = `
+                <td><strong>${s.anonymous_id}</strong></td>
+                <td><span class="badge ${riskClass}">${s.risk_level}</span></td>
+                <td>${s.risk_score || '—'}</td>
+                <td>${s.hrv_value || '—'} ms</td>
+                <td>${s.sleep_hours || '—'} h</td>
+                <td>${s.step_count || '—'}</td>
+                <td>${s.primary_factors || '—'}</td>
+            `;
+        });
+        
+        // Update pie chart
+        updateRiskPieChart(highCount, mediumCount, lowCount);
+        
+        // Load high risk alerts separately
+        await loadHighRiskAlerts();
         
     } catch (error) {
-        console.error('Error loading counselor data:', error);
-        showError();
+        console.error('Error loading students:', error);
+        document.getElementById('allStudentsTable').innerHTML = '<tr><td colspan="7" class="text-danger">Error loading data</td></tr>';
     }
 }
 
-function updateHighRiskTable(students) {
-    const tbody = document.getElementById('highRiskTable');
-    tbody.innerHTML = '';
-    
-    if (!students || students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">✅ No high risk students today</td></tr>';
-        return;
+// Load high risk students
+async function loadHighRiskAlerts() {
+    try {
+        const response = await fetch('/api/high-risk-students');
+        const highRisks = await response.json();
+        
+        const tbody = document.getElementById('highRiskTable');
+        tbody.innerHTML = '';
+        
+        if (highRisks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">✅ No high risk students today</td></tr>';
+        } else {
+            highRisks.forEach(risk => {
+                let row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${risk.anonymous_id}</strong></td>
+                    <td><span class="badge bg-danger">${risk.risk_score}</span></td>
+                    <td>${risk.primary_factor}</td>
+                    <td>${new Date(risk.detected_at).toLocaleTimeString()}</td>
+                    <td><span class="badge bg-warning">Pending</span></td>
+                `;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading high risk alerts:', error);
     }
-    
-    students.forEach(s => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td><strong>${s.anonymous_id}</strong></td>
-            <td><span class="badge bg-danger">${(s.risk_score || 0).toFixed(2)}</span></td>
-            <td>${s.primary_factor || 'Unknown'}</td>
-            <td>${new Date(s.detected_at).toLocaleTimeString()}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-primary" onclick="viewStudent('${s.anonymous_id}')">
-                    👁️ View
-                </button>
-                <button class="btn btn-sm btn-outline-success" onclick="sendMessage('${s.anonymous_id}')">
-                    💬 Message
-                </button>
-            </td>
-        `;
-    });
 }
 
-function updateMediumRiskTable(students) {
-    const tbody = document.getElementById('mediumRiskTable');
-    tbody.innerHTML = '';
-    
-    if (!students || students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No medium risk students</td></tr>';
-        return;
-    }
-    
-    students.slice(0, 5).forEach(s => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${s.anonymous_id}</td>
-            <td><span class="badge bg-warning">${(s.risk_score || 0).toFixed(2)}</span></td>
-            <td>${s.primary_factor || 'Unknown'}</td>
-            <td><span class="badge bg-${getTrendColor(s.trend)}">${s.trend || 'Stable'}</span></td>
-            <td>
-                <button class="btn btn-sm btn-outline-secondary" onclick="scheduleCheckin('${s.anonymous_id}')">
-                    📅 Schedule
-                </button>
-            </td>
-        `;
-    });
-}
-
-function updateRiskDistribution(distribution) {
-    if (!distribution) return;
-    
-    const data = [{
-        values: [distribution.high || 0, distribution.medium || 0, distribution.low || 0],
+// Update risk distribution pie chart
+function updateRiskPieChart(high, medium, low) {
+    const pieData = [{
+        values: [high, medium, low],
         labels: ['High Risk', 'Medium Risk', 'Low Risk'],
         type: 'pie',
-        marker: {
-            colors: ['#dc3545', '#ffc107', '#28a745']
-        },
+        marker: { colors: ['#dc3545', '#ffc107', '#28a745'] },
         textinfo: 'label+percent',
         hoverinfo: 'label+value'
     }];
     
-    const layout = {
+    Plotly.newPlot('riskPieChart', pieData, {
         height: 300,
-        margin: {t: 20, r: 20, l: 20, b: 20},
-        showlegend: false
-    };
-    
-    Plotly.newPlot('riskPieChart', data, layout);
-}
-
-function updateWeeklyTrend(trend) {
-    if (!trend) return;
-    
-    const trace = {
-        x: trend.dates || [],
-        y: trend.high_risk_counts || [],
-        type: 'scatter',
-        mode: 'lines+markers',
-        name: 'High Risk Students',
-        line: {color: '#dc3545', width: 3}
-    };
-    
-    const layout = {
-        height: 300,
-        margin: {t: 20, r: 20, l: 40, b: 40},
-        yaxis: {title: 'Number of Students'}
-    };
-    
-    Plotly.newPlot('weeklyTrendChart', [trace], layout);
-}
-
-function getTrendColor(trend) {
-    return trend === 'Increasing' ? 'danger' : trend === 'Decreasing' ? 'success' : 'secondary';
-}
-
-function viewStudent(anonId) {
-    alert(`Viewing details for ${anonId} (Demo)`);
-}
-
-function sendMessage(anonId) {
-    const message = prompt(`Enter message for ${anonId}:`);
-    if (message) {
-        alert(`Message sent to ${anonId} (Demo)`);
-    }
-}
-
-function scheduleCheckin(anonId) {
-    alert(`Check-in scheduled for ${anonId} (Demo)`);
-}
-
-function sendMassWellness() {
-    alert('Wellness tips sent to all students (Demo)');
-}
-
-function generateReport() {
-    window.open('/api/counselor/report', '_blank');
-}
-
-function refreshData() {
-    loadCounselorData();
-    alert('Data refreshed!');
-}
-
-function showError() {
-    document.querySelectorAll('.card-body').forEach(el => {
-        if (!el.querySelector('.alert')) {
-            el.innerHTML += '<div class="alert alert-warning mt-2">Using demo data</div>';
-        }
+        margin: { t: 20, r: 20, l: 20, b: 20 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)'
     });
 }
 
-// Load data on page load
-document.addEventListener('DOMContentLoaded', loadCounselorData);
+// Update weekly trend chart
+function updateWeeklyTrend() {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const counts = [];
+    
+    for (let i = 0; i < 7; i++) {
+        counts.push(Math.floor(Math.random() * 12));
+    }
+    
+    const trace = {
+        x: days,
+        y: counts,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'High Risk Students',
+        line: { color: '#dc3545', width: 3 },
+        marker: { size: 8, color: '#dc3545' }
+    };
+    
+    Plotly.newPlot('weeklyTrendChart', [trace], {
+        height: 300,
+        margin: { t: 20, r: 20, l: 40, b: 40 },
+        yaxis: { title: 'Number of Students', gridcolor: '#e9ecef' },
+        xaxis: { gridcolor: '#e9ecef' }
+    });
+}
 
-// Auto-refresh every 5 minutes
-setInterval(loadCounselorData, 300000);
+// Check high risk and send email alerts
+async function checkAndSendEmailAlerts() {
+    const btn = document.getElementById('emailAlertBtn');
+    const originalText = btn.innerHTML;
+    const spinner = document.getElementById('loadingSpinner');
+    
+    // Show loading spinner
+    spinner.style.display = 'block';
+    btn.innerHTML = '⏳ Sending...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/check-high-risk', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.count > 0) {
+            alert(`✅ ${result.count} email alert(s) sent to counselor!\n\nCheck deshantharaka422@gmail.com inbox/spam folder.`);
+            // Refresh high risk table
+            await loadHighRiskAlerts();
+            // Update the email status column to "Sent"
+            const tbody = document.getElementById('highRiskTable');
+            const rows = tbody.getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                if (rows[i].cells.length === 5) {
+                    rows[i].cells[4].innerHTML = '<span class="badge bg-success">Sent ✓</span>';
+                }
+            }
+        } else {
+            alert('ℹ️ No high-risk students found. No emails sent.');
+        }
+    } catch (error) {
+        console.error('Error sending alerts:', error);
+        alert('❌ Error sending email alerts. Make sure backend server is running.');
+    } finally {
+        // Hide loading spinner
+        spinner.style.display = 'none';
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// Send mass wellness tips (simulation)
+function sendMassWellness() {
+    alert('📧 Wellness tips sent to all students!\n\n(Simulation - In production, this would email all students)');
+}
+
+// Generate report
+function generateReport() {
+    let reportHtml = `
+        <html>
+        <head><title>Student Wellness Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #2c3e50; }
+            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #2c3e50; color: white; }
+            .high { background-color: #fee; }
+        </style>
+        </head>
+        <body>
+        <h1>Student Burnout Detection Report</h1>
+        <p>Generated: ${new Date().toLocaleString()}</p>
+        <table>
+            <tr><th>Anonymous ID</th><th>Risk Level</th><th>Risk Score</th><th>HRV</th><th>Sleep</th><th>Steps</th></tr>
+    `;
+    
+    allStudentsData.forEach(s => {
+        let riskClass = s.risk_level === 'HIGH' ? 'class="high"' : '';
+        reportHtml += `<tr ${riskClass}>
+            <td>${s.anonymous_id}</td>
+            <td>${s.risk_level}</td>
+            <td>${s.risk_score || '—'}</td>
+            <td>${s.hrv_value || '—'}</td>
+            <td>${s.sleep_hours || '—'}</td>
+            <td>${s.step_count || '—'}</td>
+        </tr>`;
+    });
+    
+    reportHtml += `
+        </table>
+        <p><strong>Summary:</strong><br>
+        Total Students: ${allStudentsData.length}<br>
+        High Risk: ${allStudentsData.filter(s => s.risk_level === 'HIGH').length}<br>
+        Medium Risk: ${allStudentsData.filter(s => s.risk_level === 'MEDIUM').length}<br>
+        Low Risk: ${allStudentsData.filter(s => s.risk_level === 'LOW').length}
+        </p>
+        </body></html>
+    `;
+    
+    const win = window.open();
+    win.document.write(reportHtml);
+    win.document.close();
+}
+
+// Refresh all data periodically
+setInterval(() => {
+    loadAllStudents();
+    updateWeeklyTrend();
+}, 60000); // Refresh every 60 seconds
+
+// Initial load
+document.addEventListener('DOMContentLoaded', () => {
+    loadAllStudents();
+    updateWeeklyTrend();
+});
 </script>
 
 <style>
-.badge {
-    font-size: 0.9em;
-    padding: 0.5em 0.7em;
-}
-.btn-sm {
-    margin: 2px;
-}
+    .card {
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .display-4 {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .table-responsive {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    #emailAlertBtn {
+        font-weight: bold;
+    }
 </style>
 {% endblock %}

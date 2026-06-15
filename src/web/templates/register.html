@@ -1,0 +1,64 @@
+<!-- src/web/templates/register.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white text-center">
+                <h4 class="mb-0">📝 Student Registration</h4>
+            </div>
+            <div class="card-body">
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label class="form-label">Student ID (use "deshan" for demo)</label>
+                        <input type="text" class="form-control" id="regStudentId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="regName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="regEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password (min 6 characters)</label>
+                        <input type="password" class="form-control" id="regPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="regConfirmPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Register</button>
+                </form>
+                <hr>
+                <div class="text-center">
+                    <p>Already have an account? <a href="/login">Login here</a></p>
+                    <small class="text-muted">Demo: use "deshan"/"des123" for student login</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const pwd = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirmPassword').value;
+    
+    if (pwd !== confirm) {
+        alert('❌ Passwords do not match!');
+        return;
+    }
+    if (pwd.length < 6) {
+        alert('❌ Password must be at least 6 characters');
+        return;
+    }
+    
+    alert('✅ Registration successful! (Demo)\n\nYou can now login with your Student ID.\n\nDemo login: use deshan/des123 for testing.');
+    window.location.href = '/login';
+});
+</script>
+{% endblock %}

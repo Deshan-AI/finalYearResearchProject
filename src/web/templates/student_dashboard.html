@@ -1,0 +1,186 @@
+<!-- src/web/templates/student_dashboard.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2>📊 Student Wellness Dashboard</h2>
+        <p>Welcome back, <strong>{{ session.user_id }}</strong> 👋</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-danger h-100">
+            <div class="card-body">
+                <h5 class="card-title">Current Risk Level</h5>
+                <h2 class="display-4" id="riskLevel">-</h2>
+                <p class="mb-0" id="riskScore"></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info h-100">
+            <div class="card-body">
+                <h5 class="card-title">Sleep (7-day avg)</h5>
+                <h2 class="display-4" id="avgSleep">-</h2>
+                <p class="mb-0" id="sleepQuality"></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning h-100">
+            <div class="card-body">
+                <h5 class="card-title">HRV (7-day avg)</h5>
+                <h2 class="display-4" id="avgHRV">-</h2>
+                <p class="mb-0" id="hrvStatus"></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary h-100">
+            <div class="card-body">
+                <h5 class="card-title">Days Monitored</h5>
+                <h2 class="display-4" id="daysMonitored">-</h2>
+                <p class="mb-0" id="monitorNote"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Recommendations -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📈 Risk Trend (Last 7 Days)</h5>
+            </div>
+            <div class="card-body">
+                <div id="riskChart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">💡 Recommendations</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group" id="recommendationsList">
+                    <li class="list-group-item">Loading...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Messages -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">💬 Recent Messages</h5>
+            </div>
+            <div class="card-body">
+                <div id="messagesList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+function generateRandomData() {
+    const riskOptions = ['HIGH', 'MEDIUM', 'LOW'];
+    const risk = riskOptions[Math.floor(Math.random() * riskOptions.length)];
+    const riskScore = (Math.random() * 0.8 + 0.1).toFixed(2);
+    const avgSleep = (Math.random() * 4 + 5).toFixed(1);
+    const avgHRV = Math.floor(Math.random() * 50 + 35);
+    const daysMonitored = Math.floor(Math.random() * 30 + 7);
+    
+    let sleepQuality = avgSleep >= 7 ? '😊 Good' : (avgSleep >= 6 ? '😐 Fair' : '😴 Poor');
+    let hrvStatus = avgHRV >= 60 ? '✅ Healthy' : (avgHRV >= 45 ? '🟡 Moderate' : '⚠️ Stressed');
+    
+    return { risk, riskScore, avgSleep, avgHRV, daysMonitored, sleepQuality, hrvStatus };
+}
+
+function generateTrendData() {
+    const dates = [], scores = [];
+    for (let i = 6; i >= 0; i--) {
+        let d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toLocaleDateString());
+        scores.push(Math.random() * 0.9 + 0.05);
+    }
+    return { dates, scores };
+}
+
+function getRecommendations(riskLevel) {
+    if (riskLevel === 'HIGH') {
+        return ['😥 Consider talking to a counselor', '😴 Try to get at least 7 hours of sleep', '🧘 Practice deep breathing for 5 minutes'];
+    } else if (riskLevel === 'MEDIUM') {
+        return ['🚶 Take a 15-minute walk today', '💧 Stay hydrated', '📵 Reduce screen time before bed'];
+    } else {
+        return ['👍 Keep up the good work!', '🏋️ Maintain your exercise routine', '🥗 Eat balanced meals'];
+    }
+}
+
+function getRecentMessages() {
+    return [
+        { time: 'Today, 9:15 AM', text: '🌟 Great job! Your sleep has improved.', type: 'success' },
+        { time: 'Yesterday, 2:30 PM', text: '💪 You reached 8000 steps!', type: 'info' },
+        { time: '2 days ago', text: '😊 Your stress level is lower.', type: 'success' }
+    ];
+}
+
+function updateDashboard() {
+    const data = generateRandomData();
+    const trend = generateTrendData();
+    const recommendations = getRecommendations(data.risk);
+    const messages = getRecentMessages();
+    
+    let riskEl = document.getElementById('riskLevel');
+    riskEl.textContent = data.risk;
+    riskEl.className = `display-4 text-${data.risk === 'HIGH' ? 'danger' : data.risk === 'MEDIUM' ? 'warning' : 'success'}`;
+    document.getElementById('riskScore').textContent = `Score: ${data.riskScore}`;
+    document.getElementById('avgSleep').textContent = `${data.avgSleep} h`;
+    document.getElementById('sleepQuality').textContent = data.sleepQuality;
+    document.getElementById('avgHRV').textContent = `${data.avgHRV} ms`;
+    document.getElementById('hrvStatus').textContent = data.hrvStatus;
+    document.getElementById('daysMonitored').textContent = data.daysMonitored;
+    
+    let trace = {
+        x: trend.dates, y: trend.scores, type: 'scatter', mode: 'lines+markers',
+        name: 'Risk Score', line: { color: data.risk === 'HIGH' ? '#dc3545' : '#ffc107', width: 3 }
+    };
+    Plotly.newPlot('riskChart', [trace], {
+        height: 300, margin: { t: 20, r: 20, l: 40, b: 40 },
+        yaxis: { title: 'Risk Score', range: [0, 1] }
+    });
+    
+    let recList = document.getElementById('recommendationsList');
+    recList.innerHTML = '';
+    recommendations.forEach(rec => {
+        let li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>${rec}`;
+        recList.appendChild(li);
+    });
+    
+    let msgDiv = document.getElementById('messagesList');
+    msgDiv.innerHTML = '';
+    messages.forEach(msg => {
+        let div = document.createElement('div');
+        div.className = `alert alert-${msg.type} alert-dismissible fade show`;
+        div.innerHTML = `<small>${msg.time}</small><br><strong>${msg.text}</strong>`;
+        msgDiv.appendChild(div);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateDashboard();
+    setInterval(updateDashboard, 30000);
+});
+</script>
+{% endblock %}
