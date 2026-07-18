@@ -139,6 +139,28 @@ Week 3 Features Completed:
 
 
 
+4 week imple : 
+
+      src/utils/email_sender.py
+      test_20_students.py
+      E:\cinec our new\4 year sem\research\ResearchImpleNew\src\web\templates\counselor_dashboard.html
+      src/api/routes.py
+      src/web/templates/login.html
+      src/web/templates/student_dashboard.html
+      src/web/templates/register.html
+      src/api/email_alert.py
+      src/web/templates/base.html
+      app.py
+
+
+how to run it : 
+
+      python test_20_students.py
+      python run.py
+
+
+
+
 
 
 

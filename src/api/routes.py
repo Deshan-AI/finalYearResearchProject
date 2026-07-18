@@ -529,15 +529,35 @@ async def get_all_students():
     
     return result
 
+# src/api/routes.py
+
 @router.get("/api/high-risk-students")
 async def get_high_risk_students():
     db_session = get_session()
     today = datetime.now().date()
     try:
-        high_risks = db_session.query(BurnoutRisk).filter(
-            BurnoutRisk.date >= today,
+        # 🔥 FIX: Get HIGH risk students from latest records (not just today)
+        # First get latest record for each student
+        subquery = db_session.query(
+            BurnoutRisk.student_id,
+            func.max(BurnoutRisk.date).label('max_date')
+        ).group_by(BurnoutRisk.student_id).subquery()
+        
+        # Then get only HIGH risk from latest records
+        high_risks = db_session.query(BurnoutRisk).join(
+            subquery,
+            (BurnoutRisk.student_id == subquery.c.student_id) &
+            (BurnoutRisk.date == subquery.c.max_date)
+        ).filter(
             BurnoutRisk.risk_level == "HIGH"
         ).all()
+        
+        # If no HIGH risk in latest records, check today's records
+        if not high_risks:
+            high_risks = db_session.query(BurnoutRisk).filter(
+                BurnoutRisk.date >= today,
+                BurnoutRisk.risk_level == "HIGH"
+            ).all()
         
         result = []
         for risk in high_risks:
@@ -551,6 +571,7 @@ async def get_high_risk_students():
                 'detected_at': risk.date.isoformat()
             })
     except Exception as e:
+        print(f"Error in get_high_risk_students: {e}")
         result = []
     finally:
         db_session.close()
@@ -567,10 +588,26 @@ async def check_high_risk_and_alert():
     today = datetime.now().date()
     
     try:
-        high_risks = db_session.query(BurnoutRisk).filter(
-            BurnoutRisk.date >= today,
+        # 🔥 FIX: Get HIGH risk students from latest records
+        subquery = db_session.query(
+            BurnoutRisk.student_id,
+            func.max(BurnoutRisk.date).label('max_date')
+        ).group_by(BurnoutRisk.student_id).subquery()
+        
+        high_risks = db_session.query(BurnoutRisk).join(
+            subquery,
+            (BurnoutRisk.student_id == subquery.c.student_id) &
+            (BurnoutRisk.date == subquery.c.max_date)
+        ).filter(
             BurnoutRisk.risk_level == "HIGH"
         ).all()
+        
+        if not high_risks:
+            # If no HIGH risk in latest records, check today
+            high_risks = db_session.query(BurnoutRisk).filter(
+                BurnoutRisk.date >= today,
+                BurnoutRisk.risk_level == "HIGH"
+            ).all()
         
         if not high_risks:
             return {"message": "No high-risk students found", "count": 0}
@@ -605,3 +642,52 @@ async def check_high_risk_and_alert():
         return {"message": f"Error: {e}", "count": 0}
     finally:
         db_session.close()
+
+
+
+# src/api/routes.py
+
+# Add this new endpoint for sending wellness tips
+@router.post("/api/send-wellness-tips")
+async def send_wellness_tips(request: Request):
+    """Send mass wellness tips to all students"""
+    from src.utils.email_sender import EmailSender
+    import json
+    
+    try:
+        data = await request.json()
+        wellness_content = data.get('wellness_content', '')
+        total_students = data.get('total_students', 0)
+        high_risk_count = data.get('high_risk_count', 0)
+        medium_risk_count = data.get('medium_risk_count', 0)
+        low_risk_count = data.get('low_risk_count', 0)
+        
+        # Initialize email sender
+        email_sender = EmailSender()
+        recipient = "deshantharaka422@gmail.com"  # Change to your email
+        
+        # Send email with wellness tips
+        success = email_sender.send_wellness_tips(
+            to_email=recipient,
+            wellness_content=wellness_content,
+            total_students=total_students,
+            high_risk_count=high_risk_count,
+            medium_risk_count=medium_risk_count,
+            low_risk_count=low_risk_count
+        )
+        
+        if success:
+            return {
+                "message": "Wellness tips sent successfully",
+                "sent": True,
+                "total_students": total_students
+            }
+        else:
+            return {
+                "message": "Failed to send wellness tips",
+                "sent": False
+            }
+            
+    except Exception as e:
+        print(f"Error sending wellness tips: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

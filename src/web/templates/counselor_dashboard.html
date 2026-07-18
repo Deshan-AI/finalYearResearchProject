@@ -81,7 +81,7 @@
     <div class="col-md-12">
         <div class="card border-danger">
             <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">🚨 HIGH RISK ALERTS (Today)</h5>
+                <h5 class="mb-0">🚨 HIGH RISK ALERTS</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -138,24 +138,17 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="d-grid">
-                            <button class="btn btn-danger" onclick="checkAndSendEmailAlerts()" id="emailAlertBtn">
-                                📧 Check High Risk & Send Emails
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="d-grid">
-                            <button class="btn btn-primary" onclick="sendMassWellness()">
+                            <button class="btn btn-primary" onclick="sendMassWellness()" id="massWellnessBtn">
                                 💌 Send Mass Wellness Tips
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="d-grid">
-                            <button class="btn btn-success" onclick="generateReport()">
-                                📊 Generate Report
+                            <button class="btn btn-success" onclick="generateAndDownloadReport()" id="reportBtn">
+                                📊 Generate & Download Report
                             </button>
                         </div>
                     </div>
@@ -165,17 +158,30 @@
     </div>
 </div>
 
-<!-- Loading Spinner (hidden by default) -->
+<!-- Email Status Notification -->
+<div id="emailNotification" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 350px;">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>✅ Email Alerts Sent!</strong>
+        <p id="emailNotificationMessage" class="mb-0"></p>
+        <button type="button" class="btn-close" onclick="document.getElementById('emailNotification').style.display='none'"></button>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
 <div id="loadingSpinner" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
         <span class="visually-hidden">Loading...</span>
     </div>
-    <p class="mt-2">Sending emails...</p>
+    <p class="mt-2" id="spinnerMessage">Processing...</p>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <script>
 let allStudentsData = [];
+let emailAlertsSent = false;
+let highRiskStudents = [];
 
 // Load all students from backend
 async function loadAllStudents() {
@@ -218,6 +224,11 @@ async function loadAllStudents() {
         // Load high risk alerts separately
         await loadHighRiskAlerts();
         
+        // Auto send emails if high risk students exist
+        if (highCount > 0 && !emailAlertsSent) {
+            await autoSendHighRiskEmails();
+        }
+        
     } catch (error) {
         console.error('Error loading students:', error);
         document.getElementById('allStudentsTable').innerHTML = '<tr><td colspan="7" class="text-danger">Error loading data</td></tr>';
@@ -228,31 +239,614 @@ async function loadAllStudents() {
 async function loadHighRiskAlerts() {
     try {
         const response = await fetch('/api/high-risk-students');
-        const highRisks = await response.json();
+        highRiskStudents = await response.json();
         
         const tbody = document.getElementById('highRiskTable');
         tbody.innerHTML = '';
         
-        if (highRisks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">✅ No high risk students today</td></tr>';
+        if (highRiskStudents.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">✅ No high risk students found</td></tr>';
         } else {
-            highRisks.forEach(risk => {
+            highRiskStudents.forEach(risk => {
                 let row = tbody.insertRow();
-                row.innerHTML = `
-                    <td><strong>${risk.anonymous_id}</strong></td>
-                    <td><span class="badge bg-danger">${risk.risk_score}</span></td>
-                    <td>${risk.primary_factor}</td>
-                    <td>${new Date(risk.detected_at).toLocaleTimeString()}</td>
-                    <td><span class="badge bg-warning">Pending</span></td>
-                `;
+                const emailSentKey = `email_sent_${risk.anonymous_id}`;
+                const emailSent = localStorage.getItem(emailSentKey) === 'true';
+                
+                const isCurrentlyHigh = allStudentsData.some(s => 
+                    s.anonymous_id === risk.anonymous_id && s.risk_level === 'HIGH'
+                );
+                
+                if (isCurrentlyHigh) {
+                    row.innerHTML = `
+                        <td><strong>${risk.anonymous_id}</strong></td>
+                        <td><span class="badge bg-danger">${risk.risk_score}</span></td>
+                        <td>${risk.primary_factor || '—'}</td>
+                        <td>${new Date(risk.detected_at).toLocaleString()}</td>
+                        <td><span class="badge ${emailSent ? 'bg-success' : 'bg-warning'}">${emailSent ? '✅ Sent' : '⏳ Pending'}</span></td>
+                    `;
+                }
             });
         }
     } catch (error) {
         console.error('Error loading high risk alerts:', error);
+        document.getElementById('highRiskTable').innerHTML = '<tr><td colspan="5" class="text-danger">Error loading high risk data</td></tr>';
     }
 }
 
-// Update risk distribution pie chart
+// Auto send emails function
+async function autoSendHighRiskEmails() {
+    const spinner = document.getElementById('loadingSpinner');
+    const spinnerMessage = document.getElementById('spinnerMessage');
+    spinner.style.display = 'block';
+    spinnerMessage.textContent = 'Sending email alerts...';
+    
+    try {
+        const response = await fetch('/api/check-high-risk', { 
+            method: 'POST' 
+        });
+        const result = await response.json();
+        
+        if (result.count > 0) {
+            const highRisksResponse = await fetch('/api/high-risk-students');
+            const highRisks = await highRisksResponse.json();
+            
+            highRisks.forEach(risk => {
+                localStorage.setItem(`email_sent_${risk.anonymous_id}`, 'true');
+            });
+            
+            showEmailNotification(`✅ ${result.count} high-risk email alert(s) sent to counselor automatically!`);
+            await loadHighRiskAlerts();
+            emailAlertsSent = true;
+            console.log(`✅ Auto-sent ${result.count} email alerts`);
+        } else {
+            console.log('ℹ️ No high-risk students found. No emails sent.');
+        }
+    } catch (error) {
+        console.error('Error sending auto alerts:', error);
+        showEmailNotification('❌ Error sending email alerts automatically. Please check the system.');
+    } finally {
+        spinner.style.display = 'none';
+    }
+}
+
+// ==================== SEND MASS WELLNESS ====================
+async function sendMassWellness() {
+    const btn = document.getElementById('massWellnessBtn');
+    const originalText = btn.innerHTML;
+    const spinner = document.getElementById('loadingSpinner');
+    const spinnerMessage = document.getElementById('spinnerMessage');
+    
+    // Show loading spinner
+    spinner.style.display = 'block';
+    spinnerMessage.textContent = 'Sending wellness tips to all students...';
+    btn.innerHTML = '⏳ Sending...';
+    btn.disabled = true;
+    
+    try {
+        // Get all students
+        const response = await fetch('/api/students/all');
+        const students = await response.json();
+        
+        // Filter students by risk level
+        const highRiskStudents = students.filter(s => s.risk_level === 'HIGH');
+        const mediumRiskStudents = students.filter(s => s.risk_level === 'MEDIUM');
+        const lowRiskStudents = students.filter(s => s.risk_level === 'LOW');
+        
+        // Prepare wellness messages based on risk level
+        let wellnessMessages = [];
+        
+        highRiskStudents.forEach(s => {
+            wellnessMessages.push({
+                anonymous_id: s.anonymous_id,
+                risk_level: 'HIGH',
+                message: `🚨 URGENT: ${s.anonymous_id}, your wellness indicators show high risk. Please contact the counselor immediately for support. We are here to help you.`
+            });
+        });
+        
+        mediumRiskStudents.forEach(s => {
+            wellnessMessages.push({
+                anonymous_id: s.anonymous_id,
+                risk_level: 'MEDIUM',
+                message: `⚠️ ${s.anonymous_id}, your wellness indicators show moderate risk. Please consider the following tips:`
+            });
+        });
+        
+        lowRiskStudents.forEach(s => {
+            wellnessMessages.push({
+                anonymous_id: s.anonymous_id,
+                risk_level: 'LOW',
+                message: `✅ ${s.anonymous_id}, you're doing well! Here are some tips to maintain your wellness:`
+            });
+        });
+        
+        // Create wellness tips content
+        const wellnessContent = `
+        🌿 **STUDENT WELLNESS TIPS** 🌿
+        ====================================
+        Date: ${new Date().toLocaleString()}
+        Total Students: ${students.length}
+        ====================================
+        
+        ${wellnessMessages.map(w => `
+        [${w.risk_level}] Student: ${w.anonymous_id}
+        Message: ${w.message}
+        
+        📋 General Wellness Tips:
+        • Get 7-8 hours of quality sleep daily
+        • Practice deep breathing exercises (5-10 minutes)
+        • Take regular breaks between study sessions
+        • Stay hydrated (8 glasses of water daily)
+        • Connect with friends and family
+        • Exercise for at least 30 minutes daily
+        • Practice mindfulness meditation
+        • Limit screen time before bed
+        • Eat a balanced diet
+        • Talk to someone if you feel stressed
+        
+        ${w.risk_level === 'HIGH' ? '🔴 **IMMEDIATE ACTION REQUIRED** - Please schedule a counseling session as soon as possible.' : ''}
+        ${w.risk_level === 'MEDIUM' ? '🟡 Consider reaching out to a counselor for guidance.' : ''}
+        ${w.risk_level === 'LOW' ? '🟢 Keep up the great work! Continue these healthy habits.' : ''}
+        ------------------------------------
+        `).join('\n')}
+        
+        ====================================
+        📧 This is an automated wellness message.
+        For immediate support, contact the counseling center.
+        ====================================
+        `;
+        
+        // Send to backend API
+        const sendResponse = await fetch('/api/send-wellness-tips', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                wellness_content: wellnessContent,
+                total_students: students.length,
+                high_risk_count: highRiskStudents.length,
+                medium_risk_count: mediumRiskStudents.length,
+                low_risk_count: lowRiskStudents.length
+            })
+        });
+        
+        const result = await sendResponse.json();
+        
+        // Show success message
+        const successMessage = `
+        ✅ Wellness tips sent successfully!
+        
+        📊 Summary:
+        • Total Students: ${students.length}
+        • High Risk: ${highRiskStudents.length} (URGENT)
+        • Medium Risk: ${mediumRiskStudents.length}
+        • Low Risk: ${lowRiskStudents.length}
+        
+        📧 Email sent to: counselor@wellness.com
+        
+        💡 All students have received personalized wellness tips based on their risk level.
+        `;
+        
+        alert(successMessage);
+        
+        // Show notification
+        showEmailNotification(`✅ Wellness tips sent to ${students.length} students!`);
+        
+    } catch (error) {
+        console.error('Error sending wellness tips:', error);
+        alert('❌ Error sending wellness tips. Please check the system.');
+        showEmailNotification('❌ Error sending wellness tips. Please try again.');
+    } finally {
+        spinner.style.display = 'none';
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// ==================== GENERATE & DOWNLOAD REPORT ====================
+function generateAndDownloadReport() {
+    const btn = document.getElementById('reportBtn');
+    const originalText = btn.innerHTML;
+    const spinner = document.getElementById('loadingSpinner');
+    const spinnerMessage = document.getElementById('spinnerMessage');
+    
+    // Show loading spinner
+    spinner.style.display = 'block';
+    spinnerMessage.textContent = 'Generating report...';
+    btn.innerHTML = '⏳ Generating...';
+    btn.disabled = true;
+    
+    try {
+        // Get current date and time
+        const now = new Date();
+        const dateStr = now.toLocaleDateString();
+        const timeStr = now.toLocaleTimeString();
+        
+        // Calculate statistics
+        const highCount = allStudentsData.filter(s => s.risk_level === 'HIGH').length;
+        const mediumCount = allStudentsData.filter(s => s.risk_level === 'MEDIUM').length;
+        const lowCount = allStudentsData.filter(s => s.risk_level === 'LOW').length;
+        
+        // Calculate averages
+        const avgHRV = allStudentsData.reduce((sum, s) => sum + (s.hrv_value || 0), 0) / allStudentsData.length;
+        const avgSleep = allStudentsData.reduce((sum, s) => sum + (s.sleep_hours || 0), 0) / allStudentsData.length;
+        const avgSteps = allStudentsData.reduce((sum, s) => sum + (s.step_count || 0), 0) / allStudentsData.length;
+        const avgRiskScore = allStudentsData.reduce((sum, s) => sum + (s.risk_score || 0), 0) / allStudentsData.length;
+        
+        // Create report HTML
+        const reportHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Student Wellness Report</title>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    padding: 40px;
+                    background: #f5f7fa;
+                    color: #2c3e50;
+                }
+                .report-container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                }
+                .header {
+                    text-align: center;
+                    padding-bottom: 30px;
+                    border-bottom: 3px solid #3498db;
+                    margin-bottom: 30px;
+                }
+                .header h1 {
+                    color: #2c3e50;
+                    font-size: 32px;
+                    margin-bottom: 10px;
+                }
+                .header .subtitle {
+                    color: #7f8c8d;
+                    font-size: 16px;
+                }
+                .summary-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 20px;
+                    margin-bottom: 30px;
+                }
+                .summary-card {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    text-align: center;
+                    border-left: 4px solid #3498db;
+                }
+                .summary-card .number {
+                    font-size: 28px;
+                    font-weight: bold;
+                    margin: 10px 0;
+                }
+                .summary-card .label {
+                    color: #7f8c8d;
+                    font-size: 14px;
+                }
+                .summary-card.high { border-left-color: #e74c3c; }
+                .summary-card.medium { border-left-color: #f39c12; }
+                .summary-card.low { border-left-color: #27ae60; }
+                .summary-card.primary { border-left-color: #3498db; }
+                
+                .summary-card .number.high { color: #e74c3c; }
+                .summary-card .number.medium { color: #f39c12; }
+                .summary-card .number.low { color: #27ae60; }
+                .summary-card .number.primary { color: #3498db; }
+                
+                .section-title {
+                    font-size: 20px;
+                    font-weight: bold;
+                    margin: 30px 0 15px 0;
+                    padding: 10px;
+                    background: #ecf0f1;
+                    border-radius: 5px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }
+                th {
+                    background: #34495e;
+                    color: white;
+                    padding: 12px;
+                    text-align: left;
+                    font-weight: 600;
+                }
+                td {
+                    padding: 10px 12px;
+                    border-bottom: 1px solid #ecf0f1;
+                }
+                tr:hover {
+                    background: #f8f9fa;
+                }
+                .risk-high { 
+                    background: #fee;
+                    font-weight: bold;
+                }
+                .risk-medium { background: #fff8e1; }
+                .risk-low { background: #e8f5e9; }
+                
+                .badge {
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: white;
+                }
+                .badge-high { background: #e74c3c; }
+                .badge-medium { background: #f39c12; }
+                .badge-low { background: #27ae60; }
+                
+                .footer {
+                    margin-top: 40px;
+                    padding-top: 20px;
+                    border-top: 2px solid #ecf0f1;
+                    text-align: center;
+                    color: #7f8c8d;
+                    font-size: 14px;
+                }
+                
+                .chart-placeholder {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                    text-align: center;
+                }
+                
+                @media print {
+                    body { background: white; padding: 20px; }
+                    .report-container { box-shadow: none; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="report-container" id="reportContent">
+                <div class="header">
+                    <h1>📊 Student Wellness Report</h1>
+                    <p class="subtitle">Generated on: ${dateStr} at ${timeStr}</p>
+                    <p class="subtitle">Student Burnout Detection System</p>
+                </div>
+                
+                <div class="summary-grid">
+                    <div class="summary-card primary">
+                        <div class="label">Total Students</div>
+                        <div class="number primary">${allStudentsData.length}</div>
+                    </div>
+                    <div class="summary-card high">
+                        <div class="label">High Risk</div>
+                        <div class="number high">${highCount}</div>
+                    </div>
+                    <div class="summary-card medium">
+                        <div class="label">Medium Risk</div>
+                        <div class="number medium">${mediumCount}</div>
+                    </div>
+                    <div class="summary-card low">
+                        <div class="label">Low Risk</div>
+                        <div class="number low">${lowCount}</div>
+                    </div>
+                </div>
+                
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="label">Average HRV</div>
+                        <div class="number primary">${avgHRV.toFixed(2)} ms</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">Average Sleep</div>
+                        <div class="number primary">${avgSleep.toFixed(2)} hrs</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">Average Steps</div>
+                        <div class="number primary">${avgSteps.toFixed(0)}</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">Average Risk Score</div>
+                        <div class="number primary">${avgRiskScore.toFixed(2)}</div>
+                    </div>
+                </div>
+                
+                <div class="section-title">📋 All Students - Detailed Report</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Anonymous ID</th>
+                            <th>Risk Level</th>
+                            <th>Risk Score</th>
+                            <th>HRV (ms)</th>
+                            <th>Sleep (hrs)</th>
+                            <th>Steps</th>
+                            <th>Primary Factor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allStudentsData.map(s => `
+                        <tr class="${s.risk_level === 'HIGH' ? 'risk-high' : s.risk_level === 'MEDIUM' ? 'risk-medium' : 'risk-low'}">
+                            <td><strong>${s.anonymous_id}</strong></td>
+                            <td><span class="badge badge-${s.risk_level.toLowerCase()}">${s.risk_level}</span></td>
+                            <td>${s.risk_score || '—'}</td>
+                            <td>${s.hrv_value || '—'}</td>
+                            <td>${s.sleep_hours || '—'}</td>
+                            <td>${s.step_count || '—'}</td>
+                            <td>${s.primary_factors || '—'}</td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="section-title">📈 Risk Level Distribution</div>
+                <div class="chart-placeholder">
+                    <p>🟥 High Risk: ${highCount} students (${(highCount/allStudentsData.length*100).toFixed(1)}%)</p>
+                    <p>🟨 Medium Risk: ${mediumCount} students (${(mediumCount/allStudentsData.length*100).toFixed(1)}%)</p>
+                    <p>🟩 Low Risk: ${lowCount} students (${(lowCount/allStudentsData.length*100).toFixed(1)}%)</p>
+                </div>
+                
+                <div class="section-title">🔴 High Risk Students - Immediate Attention Required</div>
+                ${highCount > 0 ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Anonymous ID</th>
+                            <th>Risk Score</th>
+                            <th>Primary Factor</th>
+                            <th>HRV</th>
+                            <th>Sleep</th>
+                            <th>Steps</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allStudentsData.filter(s => s.risk_level === 'HIGH').map(s => `
+                        <tr class="risk-high">
+                            <td><strong>${s.anonymous_id}</strong></td>
+                            <td>${s.risk_score}</td>
+                            <td>${s.primary_factors || '—'}</td>
+                            <td>${s.hrv_value || '—'} ms</td>
+                            <td>${s.sleep_hours || '—'} hrs</td>
+                            <td>${s.step_count || '—'}</td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : `<p style="color: #27ae60;">✅ No high risk students at this time.</p>`}
+                
+                <div class="section-title">💡 Recommendations</div>
+                <ul style="padding-left: 20px; line-height: 2;">
+                    ${highCount > 0 ? `
+                    <li>🔴 <strong>Immediate:</strong> Schedule counseling sessions for ${highCount} high-risk student(s)</li>
+                    <li>🟡 <strong>Urgent:</strong> Send personalized wellness tips to high-risk students</li>
+                    ` : ''}
+                    ${mediumCount > 0 ? `
+                    <li>🟡 <strong>Follow-up:</strong> Check in with ${mediumCount} medium-risk students</li>
+                    ` : ''}
+                    ${lowCount > 0 ? `
+                    <li>🟢 <strong>Maintain:</strong> Continue wellness programs for ${lowCount} low-risk students</li>
+                    ` : ''}
+                    <li>📊 <strong>Review:</strong> Monitor weekly trends for early intervention</li>
+                    <li>📧 <strong>Communication:</strong> Ensure regular wellness communications</li>
+                </ul>
+                
+                <div class="footer">
+                    <p>© 2024 Student Burnout Detection System | Research Project</p>
+                    <p>This report is automatically generated and should be reviewed by the counselor.</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;" class="no-print">
+                <button onclick="downloadPDF()" style="padding: 12px 30px; background: #3498db; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-right: 10px;">
+                    📥 Download PDF
+                </button>
+                <button onclick="printReport()" style="padding: 12px 30px; background: #2ecc71; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+                    🖨️ Print Report
+                </button>
+                <button onclick="window.close()" style="padding: 12px 30px; background: #e74c3c; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-left: 10px;">
+                    ✖ Close
+                </button>
+            </div>
+        </body>
+        </html>
+        `;
+        
+        // Open report in new window
+        const reportWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
+        reportWindow.document.write(reportHtml);
+        reportWindow.document.close();
+        
+        // Add functions to the new window
+        reportWindow.downloadPDF = function() {
+            const element = reportWindow.document.getElementById('reportContent');
+            const opt = {
+                margin: 10,
+                filename: `Wellness_Report_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // Show loading in report window
+            reportWindow.document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+                    <div style="font-size: 24px;">⏳ Generating PDF...</div>
+                    <div style="margin-top: 20px;">Please wait</div>
+                </div>
+            `;
+            
+            // Use html2pdf to generate PDF
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            script.onload = function() {
+                // Re-create the report content
+                const content = document.createElement('div');
+                content.innerHTML = reportHtml;
+                document.body.innerHTML = '';
+                document.body.appendChild(content);
+                
+                // Remove print buttons
+                const noPrintElements = document.querySelectorAll('.no-print');
+                noPrintElements.forEach(el => el.style.display = 'none');
+                
+                // Generate PDF
+                html2pdf()
+                    .set(opt)
+                    .from(content)
+                    .save()
+                    .then(() => {
+                        // Reload original report after download
+                        document.body.innerHTML = reportHtml;
+                        // Re-attach functions
+                        window.downloadPDF = downloadPDF;
+                        window.printReport = printReport;
+                    });
+            };
+            document.head.appendChild(script);
+        };
+        
+        reportWindow.printReport = function() {
+            reportWindow.print();
+        };
+        
+        // Show success message
+        showEmailNotification(`✅ Report generated successfully!`);
+        
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('❌ Error generating report. Please try again.');
+        showEmailNotification('❌ Error generating report.');
+    } finally {
+        spinner.style.display = 'none';
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// ==================== SHOW NOTIFICATION ====================
+function showEmailNotification(message) {
+    const notification = document.getElementById('emailNotification');
+    const messageElement = document.getElementById('emailNotificationMessage');
+    messageElement.textContent = message;
+    notification.style.display = 'block';
+    
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 10000);
+}
+
+// ==================== CHARTS ====================
 function updateRiskPieChart(high, medium, low) {
     const pieData = [{
         values: [high, medium, low],
@@ -271,7 +865,6 @@ function updateRiskPieChart(high, medium, low) {
     });
 }
 
-// Update weekly trend chart
 function updateWeeklyTrend() {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const counts = [];
@@ -298,108 +891,12 @@ function updateWeeklyTrend() {
     });
 }
 
-// Check high risk and send email alerts
-async function checkAndSendEmailAlerts() {
-    const btn = document.getElementById('emailAlertBtn');
-    const originalText = btn.innerHTML;
-    const spinner = document.getElementById('loadingSpinner');
-    
-    // Show loading spinner
-    spinner.style.display = 'block';
-    btn.innerHTML = '⏳ Sending...';
-    btn.disabled = true;
-    
-    try {
-        const response = await fetch('/api/check-high-risk', { method: 'POST' });
-        const result = await response.json();
-        
-        if (result.count > 0) {
-            alert(`✅ ${result.count} email alert(s) sent to counselor!\n\nCheck deshantharaka422@gmail.com inbox/spam folder.`);
-            // Refresh high risk table
-            await loadHighRiskAlerts();
-            // Update the email status column to "Sent"
-            const tbody = document.getElementById('highRiskTable');
-            const rows = tbody.getElementsByTagName('tr');
-            for (let i = 0; i < rows.length; i++) {
-                if (rows[i].cells.length === 5) {
-                    rows[i].cells[4].innerHTML = '<span class="badge bg-success">Sent ✓</span>';
-                }
-            }
-        } else {
-            alert('ℹ️ No high-risk students found. No emails sent.');
-        }
-    } catch (error) {
-        console.error('Error sending alerts:', error);
-        alert('❌ Error sending email alerts. Make sure backend server is running.');
-    } finally {
-        // Hide loading spinner
-        spinner.style.display = 'none';
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-}
-
-// Send mass wellness tips (simulation)
-function sendMassWellness() {
-    alert('📧 Wellness tips sent to all students!\n\n(Simulation - In production, this would email all students)');
-}
-
-// Generate report
-function generateReport() {
-    let reportHtml = `
-        <html>
-        <head><title>Student Wellness Report</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            h1 { color: #2c3e50; }
-            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #2c3e50; color: white; }
-            .high { background-color: #fee; }
-        </style>
-        </head>
-        <body>
-        <h1>Student Burnout Detection Report</h1>
-        <p>Generated: ${new Date().toLocaleString()}</p>
-        <table>
-            <tr><th>Anonymous ID</th><th>Risk Level</th><th>Risk Score</th><th>HRV</th><th>Sleep</th><th>Steps</th></tr>
-    `;
-    
-    allStudentsData.forEach(s => {
-        let riskClass = s.risk_level === 'HIGH' ? 'class="high"' : '';
-        reportHtml += `<tr ${riskClass}>
-            <td>${s.anonymous_id}</td>
-            <td>${s.risk_level}</td>
-            <td>${s.risk_score || '—'}</td>
-            <td>${s.hrv_value || '—'}</td>
-            <td>${s.sleep_hours || '—'}</td>
-            <td>${s.step_count || '—'}</td>
-        </tr>`;
-    });
-    
-    reportHtml += `
-        </table>
-        <p><strong>Summary:</strong><br>
-        Total Students: ${allStudentsData.length}<br>
-        High Risk: ${allStudentsData.filter(s => s.risk_level === 'HIGH').length}<br>
-        Medium Risk: ${allStudentsData.filter(s => s.risk_level === 'MEDIUM').length}<br>
-        Low Risk: ${allStudentsData.filter(s => s.risk_level === 'LOW').length}
-        </p>
-        </body></html>
-    `;
-    
-    const win = window.open();
-    win.document.write(reportHtml);
-    win.document.close();
-}
-
-// Refresh all data periodically
+// ==================== INITIALIZATION ====================
 setInterval(() => {
     loadAllStudents();
     updateWeeklyTrend();
-}, 60000); // Refresh every 60 seconds
+}, 60000);
 
-// Initial load
 document.addEventListener('DOMContentLoaded', () => {
     loadAllStudents();
     updateWeeklyTrend();
@@ -423,8 +920,20 @@ document.addEventListener('DOMContentLoaded', () => {
         max-height: 400px;
         overflow-y: auto;
     }
-    #emailAlertBtn {
-        font-weight: bold;
+    
+    #emailNotification {
+        animation: slideIn 0.5s ease-in-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
 </style>
 {% endblock %}
