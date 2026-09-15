@@ -164,3 +164,28 @@ how to run it :
 
 
 
+
+
+
+
+
+
+
+
+
+(1)
+
+Sleep Quality = (Actual Sleep Hours / Ideal Sleep Hours) × Sleep Efficiency
+
+Sleep Efficiency = (Total Sleep Time / Time in Bed) × 100
+
+
+(2)
+
+Stress Level = 1 - (HRV / HRV_Max)
+
+(3)
+
+Risk Score = (w1 × HRV_Factor) + (w2 × Sleep_Factor) + (w3 × Activity_Factor) + (w4 × Stress_Factor)
+
+

@@ -40,36 +40,36 @@ class NotificationSystem:
         # Personalized messages based on primary factor
         if primary_factor == "HRV":
             message = f"""
-            හෙලෝ Student {student_id}!
+            Hello Student {student_id}!
             
-            අපගේ පද්ධතියට අනුව ඔබගේ හෘද ස්පන්දන රටාවේ වෙනස්කම් දක්නට ලැබේ.
-            මෙය ආතතියේ ලකුණක් විය හැකියි.
+            Our system has detected changes in your heart rate variability.
+            This could be a sign of stress.
             
-            කරුණාකර ඔබේ සෞඛ්‍යය ගැන සැලකිලිමත් වන්න.
-            අවශ්‍ය නම් විශ්වවිද්‍යාලයේ කාවන්සලින්ග් සේවාව අමතන්න.
+            Please take care of your health.
+            If needed, contact the university counseling service.
             
-            සුබ දවසක්!
+            Have a great day!
             """
         elif primary_factor == "Sleep":
             message = f"""
-            හෙලෝ Student {student_id}!
+            Hello Student {student_id}!
             
-            ඔබගේ නින්දේ රටාවේ අඩුවක් පෙනෙනවා.
-            ප්‍රමාණවත් නින්ද ඔබේ මානසික සෞඛ්‍යට ඉතා වැදගත්.
+            A decrease in your sleep pattern has been observed.
+            Adequate sleep is very important for your mental health.
             
-            සරල නින්ද උපදෙස් කිහිපයක්:
-            • නින්දට යාමට පෙර ජංගම දුරකථන භාවිතය අඩු කරන්න
-            • කාමරය අඳුරු කර තබා ගන්න
-            • නින්දට පෙර කෝපි/තේ පානයෙන් වළකින්න
+            Some simple sleep tips:
+            • Reduce mobile phone usage before bedtime
+            • Keep your room dark
+            • Avoid coffee/tea before sleep
             """
         else:  # Activity
             message = f"""
-            හෙලෝ Student {student_id}!
+            Hello Student {student_id}!
             
-            ඔබගේ ශාරීරික ක්‍රියාකලාපය අඩු වී ඇත.
-            කුඩා ව්‍යායාම පුරුද්දක් මානසික ආතතිය අඩු කරන්න උපකාරී වේ.
+            Your physical activity level has decreased.
+            A small exercise routine can help reduce mental stress.
             
-            දිනපතා පියවර 5000ක් ඇවිදින්න උත්සාහ කරන්න.
+            Try to walk 5000 steps daily.
             """
         
         return {

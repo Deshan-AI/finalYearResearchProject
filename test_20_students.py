@@ -229,5 +229,295 @@ try:
 except:
     print("⚠️ Could not trigger email alerts (server not running?)")    
 
+
+
+
+# =============================================
+# EXCEL FILE GENERATION - ADD THIS CODE BELOW
+# =============================================
+
+def generate_excel_report():
+    """
+    Generate Excel file with student health metrics only.
+    Each student gets a different date starting from 2026-06-03
+    """
+    
+    print("\n📊 Generating Excel report for all 20 students...")
+    
+    session = get_session()
+    
+    students = session.query(Student).all()
+    
+    if not students:
+        print("⚠️ No students found in database!")
+        session.close()
+        return
+    
+    data = []
+    
+    # Start date: 2026-06-03 at 8:00 AM
+    start_date = datetime(2026, 6, 3, 8, 0, 0)
+    
+    for index, student in enumerate(students):
+        bio = session.query(BioSignalData).filter(
+            BioSignalData.student_id == student.student_id
+        ).order_by(BioSignalData.timestamp.desc()).first()
+        
+        # Calculate date for this student (add 24 hours for each student)
+        student_date = start_date + timedelta(days=index)
+        
+        if bio:
+            row = {
+                'Student ID': student.student_id,
+                'Anonymous ID': student.anonymous_id,
+                'Date': student_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'Heart Rate (bpm)': bio.heart_rate,
+                'HRV (ms)': bio.hrv_value,
+                'Sleep Hours': round(bio.sleep_hours, 2),
+                'Step Count': bio.step_count,
+            }
+            data.append(row)
+        else:
+            row = {
+                'Student ID': student.student_id,
+                'Anonymous ID': student.anonymous_id,
+                'Date': student_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'Heart Rate (bpm)': 'No Data',
+                'HRV (ms)': 'No Data',
+                'Sleep Hours': 'No Data',
+                'Step Count': 'No Data',
+            }
+            data.append(row)
+    
+    session.close()
+    
+    df = pd.DataFrame(data)
+    
+    filename = f"student_health_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+    
+    with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Student Health Data', index=False)
+        
+        worksheet = writer.sheets['Student Health Data']
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    print(f"✅ Excel report generated successfully!")
+    print(f"📁 File: {filepath}")
+    print(f"📊 Total students: {len(data)}")
+    print(f"📋 Columns: {', '.join(df.columns)}")
+    print(f"📅 Date range: {start_date.strftime('%Y-%m-%d')} to {(start_date + timedelta(days=len(students)-1)).strftime('%Y-%m-%d')}")
+    
+    return filepath
+
+
+def generate_summary_excel():
+    """
+    Generate a summary Excel with health statistics only.
+    """
+    
+    print("\n📊 Generating Summary Statistics Excel...")
+    
+    session = get_session()
+    
+    students = session.query(Student).all()
+    
+    if not students:
+        print("⚠️ No students found in database!")
+        session.close()
+        return
+    
+    bio_data = []
+    
+    # Start date: 2026-06-03 at 8:00 AM
+    start_date = datetime(2026, 6, 3, 8, 0, 0)
+    
+    for index, student in enumerate(students):
+        bio = session.query(BioSignalData).filter(
+            BioSignalData.student_id == student.student_id
+        ).order_by(BioSignalData.timestamp.desc()).first()
+        
+        if bio:
+            student_date = start_date + timedelta(days=index)
+            bio_data.append({
+                'Student ID': student.student_id,
+                'Date': student_date.strftime('%Y-%m-%d'),
+                'Heart Rate': bio.heart_rate,
+                'HRV': bio.hrv_value,
+                'Sleep Hours': bio.sleep_hours,
+                'Step Count': bio.step_count,
+            })
+    
+    session.close()
+    
+    if not bio_data:
+        print("⚠️ No bio data found!")
+        return
+    
+    bio_df = pd.DataFrame(bio_data)
+    
+    stats = {
+        'Metric': ['HRV', 'Sleep Hours', 'Heart Rate', 'Step Count'],
+        'Average': [
+            round(bio_df['HRV'].mean(), 2),
+            round(bio_df['Sleep Hours'].mean(), 2),
+            round(bio_df['Heart Rate'].mean(), 2),
+            round(bio_df['Step Count'].mean(), 2)
+        ],
+        'Minimum': [
+            bio_df['HRV'].min(),
+            bio_df['Sleep Hours'].min(),
+            bio_df['Heart Rate'].min(),
+            bio_df['Step Count'].min()
+        ],
+        'Maximum': [
+            bio_df['HRV'].max(),
+            bio_df['Sleep Hours'].max(),
+            bio_df['Heart Rate'].max(),
+            bio_df['Step Count'].max()
+        ],
+        'Std Dev': [
+            round(bio_df['HRV'].std(), 2),
+            round(bio_df['Sleep Hours'].std(), 2),
+            round(bio_df['Heart Rate'].std(), 2),
+            round(bio_df['Step Count'].std(), 2)
+        ]
+    }
+    
+    stats_df = pd.DataFrame(stats)
+    
+    filename = f"student_health_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+    
+    with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+        stats_df.to_excel(writer, sheet_name='Statistics', index=False)
+        
+        worksheet = writer.sheets['Statistics']
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+    
+    print(f"✅ Summary Excel generated successfully!")
+    print(f"📁 File: {filepath}")
+    
+    return filepath
+
+
+# =============================================
+# MAIN FUNCTION - REPLACE THE EXISTING ONE
+# =============================================
+
+def run_test():
+    
+    print("="*60)
+    print("🧪 TESTING 20 STUDENTS WITH EMAIL ALERTS")
+    print("="*60)
+    
+    # Setup database
+    print("\n📁 Setting up database...")
+    setup_database()
+    
+    # === SCHEMA FIX BLOCK ===
+    try:
+        from src.database.models import Base
+        from src.database.database_setup import get_session
+        
+        # Get engine safely
+        session = get_session()
+        engine = session.get_bind()
+        
+        print("🔄 Updating database schema (dropping & recreating tables)...")
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database schema updated successfully!")
+        
+    except Exception as e:
+        print(f"❌ Schema update failed: {e}")
+        print("Trying to add columns manually...")
+        
+        try:
+            from sqlalchemy import text
+            from src.database.database_setup import get_session
+            
+            session = get_session()
+            engine = session.get_bind()
+            
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE students ADD COLUMN fitbit_token TEXT"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN google_fit_token TEXT"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN apple_health_token TEXT"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN token_updated_at DATETIME"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN last_sync_time DATETIME"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN sync_frequency INTEGER DEFAULT 3600"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN email_notifications BOOLEAN DEFAULT true"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN sms_notifications BOOLEAN DEFAULT false"))
+                conn.execute(text("ALTER TABLE students ADD COLUMN notification_frequency TEXT DEFAULT 'daily'"))
+                conn.commit()
+            print("✅ Missing columns added using ALTER TABLE!")
+            
+        except Exception as e2:
+            print(f"❌ Could not add columns: {e2}")
+            print("💡 Recommendation: Delete the 'students.db' file and run again.")
+    # ======================================
+    
+    # Generate 20 students
+    print("\n👥 Generating 20 students with mock data...")
+    students = generate_student_data()
+    
+    # Send email alerts
+    print("\n📧 Sending email alerts...")
+    send_high_risk_alerts()
+    
+    # =============================================
+    # NEW: Generate Excel reports
+    # =============================================
+    print("\n" + "="*60)
+    print("📊 GENERATING EXCEL REPORTS")
+    print("="*60)
+    
+    # Generate main Excel with all student data
+    excel_file = generate_excel_report()
+    
+    # Generate summary Excel
+    summary_file = generate_summary_excel()
+    
+    print("\n" + "="*60)
+    print("📊 EXCEL REPORTS COMPLETED")
+    print("="*60)
+    if excel_file:
+        print(f"✅ Main data file: {os.path.basename(excel_file)}")
+    if summary_file:
+        print(f"✅ Summary file: {os.path.basename(summary_file)}")
+    # =============================================
+    
+    print("\n✅ Test complete!")
+    print("\n📋 Next steps:")
+    print("   1. Check the generated Excel files in the current directory")
+    print("   2. Run your web app: python run.py")
+    print("   3. Open browser: http://localhost:8000")
+
+
+# =============================================
+# RUN THE PROGRAM
+# =============================================
+
 if __name__ == "__main__":
     run_test()

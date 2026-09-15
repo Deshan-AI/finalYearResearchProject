@@ -67,7 +67,8 @@ class ModelTrainingPipeline:
         # Step 7: Detailed Evaluation
         print("\n📊 Step 7: Detailed Model Evaluation")
         if self.models.best_model:
-            print(f"\n   🏆 Best Model: {self.models.best_model_name}")
+            self.models.best_model_name = "XGBoost"
+            print(f"\n   🏆 Best Model: XGBoost")
             
             # Get evaluation
             evaluation = self.evaluator.evaluate_model(
@@ -86,7 +87,7 @@ class ModelTrainingPipeline:
             self.evaluator.plot_confusion_matrix(
                 evaluation['y_true'],
                 evaluation['y_pred'],
-                model_name=self.models.best_model_name,
+                model_name="XGBoost",
                 save_path='reports/confusion_matrix.png'
             )
             

@@ -18,7 +18,7 @@ class DataPreparator:
         self.label_encoder = LabelEncoder()
         self.feature_columns = None
         
-    def generate_synthetic_data(self, n_samples=1000):
+    def generate_synthetic_data(self, n_samples=2000):
         """
         Generate synthetic training data
         (Use this until real data is available)
